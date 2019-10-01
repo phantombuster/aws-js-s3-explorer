@@ -906,14 +906,6 @@ function SettingsController($scope, SharedService) {
 
     $scope.settings = defaultSettings;
 
-    const encodedSettings = qs('settings');
-
-    if(encodedSettings){
-        const settingsJSON = atob(encodedSettings);
-        const settingsObj = JSON.parse(settingsJSON);
-        $scope.settings = settingsObj;
-    }
-
     // TODO: at present the Settings dialog closes after credentials have been supplied
     // even if the subsequent AWS calls fail with networking or permissions errors. It
     // would be better for the Settings dialog to synchronously make the necessary API
@@ -939,8 +931,18 @@ function SettingsController($scope, SharedService) {
             $scope.settings.cred = { accessKeyId: null, secretAccessKey: null };
         }
 
-        SharedService.changeSettings($scope.settings);
-    };
+		SharedService.changeSettings($scope.settings);
+		SharedService.changeViewPrefix($scope.settings.prefix);
+	};
+
+	const encodedSettings = qs('settings');
+
+    if(encodedSettings){
+        const settingsJSON = atob(encodedSettings);
+        const settingsObj = JSON.parse(settingsJSON);
+		$scope.settings = settingsObj;
+		$scope.update()
+    }
 }
 
 //
@@ -1316,5 +1318,6 @@ $(document).ready(() => {
     // Initialize the moment library (for time formatting utilities) and
     // launch the initial Settings dialog requesting bucket & credentials.
     moment().format();
-    $('#SettingsModal').modal({ keyboard: true, backdrop: 'static' });
+	// $('#SettingsModal').modal({ keyboard: true, backdrop: 'static' });
+	angular.element("#SettingsModal").scope().update()
 });
