@@ -457,6 +457,7 @@ function ViewController($scope, SharedService) {
 
             // Bucket
             if (ii === 0) {
+				continue
                 const a1 = $('<a>').attr('href', '#').text(bucket);
                 li = $('<li>').append(a1);
             // Followed by n - 1 intermediate folders
