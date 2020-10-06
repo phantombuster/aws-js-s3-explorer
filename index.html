@@ -22,7 +22,7 @@ permissions and limitations under the License.
     <title>File browser | Phantombuster</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="shortcut icon" href="https://aws.amazon.com/favicon.ico">
+    <link rel="shortcut icon" type="image/png" href="/images/icon.png">
     <link rel="stylesheet" href="/lib/bootstrap.min.css">
     <link rel="stylesheet" href="/lib/bootstrap-theme.min.css">
     <link rel="stylesheet" href="/lib/all.css">
@@ -315,7 +315,6 @@ Please see the project <a target="_blank" href="https://github.com/awslabs/aws-j
                                         <th>Folder</th>
                                         <th>Last Modified</th>
                                         <th>Timestamp</th>
-                                        <th>Class</th>
                                         <th>Size</th>
                                         <th>Result</th>
                                     </tr>
@@ -492,12 +491,13 @@ Please see the project <a target="_blank" href="https://github.com/awslabs/aws-j
                         <table class="table table-bordered table-hover table-striped" style="width:100%" id="s3objects-table">
                             <thead>
                                 <tr>
-                                    <th class="text-center">Select</th>
+                                    <th class="text-center">
+                                        <input type="checkbox" id="select-all">
+                                    </th>
                                     <th>Object</th>
                                     <th>Folder</th>
                                     <th>Last Modified</th>
                                     <th>Timestamp</th>
-                                    <th>Class</th>
                                     <th>Size</th>
                                 </tr>
                             </thead>

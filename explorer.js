@@ -20,24 +20,13 @@
 /* eslint-env es6 */
 
 const s3ExplorerColumns = {
-	check: 0, object: 1, folder: 2, date: 3, timestamp: 4, storageclass: 5, size: 6,
+	check: 0, object: 1, folder: 2, date: 3, timestamp: 4, size: 5,
 };
 
 // Cache frequently-used selectors and data table
 const $tb = $('#s3objects-table');
 const $bc = $('#breadcrumb');
 const $bl = $('#bucket-loader');
-
-// Map S3 storage types to text
-const mapStorage = {
-	STANDARD: 'Standard',
-	STANDARD_IA: 'Standard IA',
-	ONEZONE_IA: 'One Zone-IA',
-	REDUCED_REDUNDANCY: 'Reduced Redundancy',
-	GLACIER: 'Glacier',
-	INTELLIGENT_TIERING: 'Intelligent Tiering',
-	DEEP_ARCHIVE: 'Deep Archive',
-};
 
 // Debug utility to complement console.log
 const DEBUG = (() => {
@@ -404,6 +393,7 @@ function ViewController($scope, SharedService) {
 
 	$scope.refresh = () => {
 		DEBUG.log('refresh');
+		document.querySelector('#select-all').checked = false;
 		if ($scope.running()) {
 			DEBUG.log('running, stop');
 			$scope.listobjectsstop();
@@ -462,11 +452,11 @@ function ViewController($scope, SharedService) {
 				li = $('<li>').append(a1);
 			// Followed by n - 1 intermediate folders
 			} else if (ii < prefixes.length - 1) {
-				const a2 = $('<a>').attr('href', '#').text(prefixes[ii]);
+				const a2 = $('<a>').attr('href', '#').text(ii === 1 ? "Files" : prefixes[ii]);
 				li = $('<li>').append(a2);
 			// Followed by current folder
 			} else {
-				li = $('<li>').text(prefixes[ii]);
+				li = $('<li>').text(prefixes.length > 2 ? prefixes[ii] : "Files");
 			}
 
 			// Accumulate prefix
@@ -526,7 +516,7 @@ function ViewController($scope, SharedService) {
 					// ignore this folder
 				} else if (isfolder(value.Key)) {
 					$tb.DataTable().row.add({
-						CommonPrefix: true, Key: value.Key, StorageClass: null,
+						CommonPrefix: true, Key: value.Key,
 					});
 					count.folders++;
 				} else {
@@ -541,7 +531,7 @@ function ViewController($scope, SharedService) {
 			// DEBUG.log("CommonPrefixes:", data.CommonPrefixes);
 			$.each(data.CommonPrefixes, (index, value) => {
 				$tb.DataTable().rows.add([
-					{ CommonPrefix: true, Key: value.Prefix, StorageClass: null },
+					{ CommonPrefix: true, Key: value.Prefix },
 				]);
 				count.objects++;
 			});
@@ -648,14 +638,6 @@ function ViewController($scope, SharedService) {
 		return '';
 	};
 
-	this.renderStorageClass = (data, _type, _full) => {
-		if (data) {
-			return mapStorage[data];
-		}
-
-		return '';
-	};
-
 	// Object sizes are displayed in nicer format e.g. 1.2 MB but are otherwise
 	// handled as simple number of bytes e.g. for sorting purposes
 	this.dataSize = (source, type, _val) => {
@@ -666,10 +648,20 @@ function ViewController($scope, SharedService) {
 		return '';
 	};
 
+	// Called when the table renders
+	const drawCallback = () => {
+		document.querySelectorAll('td input[type="checkbox"]').forEach((checkbox) => {
+			const $row = $(checkbox).closest('tr');
+			const data = $tb.DataTable().row($row).data();
+			checkbox.checked = Boolean($scope.view.keys_selected.find(e2 => e2.Key === data.Key));
+		});
+	}
+
 	// Initial DataTable settings (must only do this one time)
 	$tb.DataTable({
 		iDisplayLength: 25,
 		order: [[2, 'asc'], [1, 'asc']],
+		drawCallback,
 		aoColumnDefs: [
 			{
 				aTargets: [0], mData: null, mRender: this.renderSelect, sClass: 'text-center', sWidth: '20px', bSortable: false,
@@ -687,10 +679,7 @@ function ViewController($scope, SharedService) {
 				aTargets: [4], mData: 'LastModified', mRender: this.renderTimestamp,
 			},
 			{
-				aTargets: [5], mData: 'StorageClass', mRender: this.renderStorageClass,
-			},
-			{
-				aTargets: [6], mData: this.dataSize,
+				aTargets: [5], mData: this.dataSize,
 			},
 		],
 	});
@@ -712,6 +701,39 @@ function ViewController($scope, SharedService) {
 		if (x > y) return -1;
 		return 0;
 	};
+
+	$('#select-all').on('click', () => {
+		const isSelectAllChecked = document.querySelector('#select-all').checked;
+		$scope.view.keys_selected = [];
+
+		$tb.DataTable().rows().data().each((data) => {
+			const link = document.querySelector(`[data-s3Key="${data.Key}"]`);
+			const checkbox = link && link.parentElement && link.parentElement.parentElement
+				? link.parentElement.parentElement.querySelector("input[type='checkbox']")
+				: null;
+
+			if (isSelectAllChecked) {
+				$scope.view.keys_selected.push(data);
+			}
+
+			$scope.$apply(() => {
+				// Doing this to force Angular to update models
+				DEBUG.log('Selected rows:', $scope.view.keys_selected);
+			});
+
+			if (checkbox) {
+				const $row = $(checkbox).closest('tr');
+				checkbox.checked = isSelectAllChecked;
+				if ($row) {
+					if (isSelectAllChecked) {
+						$row.addClass('selected');
+					} else {
+						$row.removeClass('selected');
+					}
+				}
+			}
+		})
+	});
 
 	// Handle click on selection checkbox
 	$('#s3objects-table tbody').on('click', 'input[type="checkbox"]', (e1) => {
@@ -1257,7 +1279,6 @@ function TrashController($scope, SharedService) {
 				$('<td>').append(isfolder(obj.Key) ? prefix2parentfolder(obj.Key) : fullpath2pathname(obj.Key)),
 				$('<td>').append(isfolder(obj.Key) ? '' : moment(obj.LastModified).fromNow()),
 				$('<td>').append(obj.LastModified ? moment(obj.LastModified).local().format('YYYY-MM-DD HH:mm:ss') : ''),
-				$('<td>').append(isfolder(obj.Key) ? '' : mapStorage[obj.StorageClass]),
 				$('<td>').append(isfolder(obj.Key) ? '' : bytesToSize(obj.Size)),
 				$('<td>').attr('id', `trash-td-${ii}`).append($('<i>').append('n/a')),
 			];
