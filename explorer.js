@@ -376,7 +376,7 @@ function ViewController($scope, SharedService) {
 		const href = object2hrefvirt($scope.view.settings.bucket, s3FileKey);
 
 		// ETag is in quotes so we need to remove them
-		const etag = s3File.ETag.split('"').join("");
+		const etag = s3File.ETag.replace(/"/g, "");
 
 		if (s3File.CommonPrefix) {
 			// DEBUG.log("is folder: " + data);
@@ -717,7 +717,7 @@ function ViewController($scope, SharedService) {
 		$scope.view.keys_selected = [];
 
 		$tb.DataTable().rows().data().each((data) => {
-			const etag = data.ETag.split('"').join("")
+			const etag = data.ETag.replace(/"/g, "");
 			const link = document.querySelector(`[data-etag="${etag}"]`);
 			const checkbox = link && link.parentElement && link.parentElement.parentElement
 				? link.parentElement.parentElement.querySelector("input[type='checkbox']")
