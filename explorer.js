@@ -1284,17 +1284,18 @@ function TrashController($scope, SharedService) {
 			const obj = args.keys[ii];
 			DEBUG.log('Object to be deleted:', obj);
 
+			const sanitizedS3Key = sanitizeString(obj.Key);
 			const td = [
 				$('<td>').append(ii + 1),
-				$('<td>').append(isfolder(obj.Key) ? prefix2folder(obj.Key) : fullpath2filename(obj.Key)),
-				$('<td>').append(isfolder(obj.Key) ? prefix2parentfolder(obj.Key) : fullpath2pathname(obj.Key)),
+				$('<td>').append(isfolder(obj.Key) ? prefix2folder(sanitizedS3Key) : fullpath2filename(sanitizedS3Key)).attr('title', sanitizedS3Key),
+				$('<td>').append(isfolder(obj.Key) ? prefix2parentfolder(sanitizedS3Key) : fullpath2pathname(sanitizedS3Key)),
 				$('<td>').append(isfolder(obj.Key) ? '' : moment(obj.LastModified).fromNow()),
 				$('<td>').append(obj.LastModified ? moment(obj.LastModified).local().format('YYYY-MM-DD HH:mm:ss') : ''),
 				$('<td>').append(isfolder(obj.Key) ? '' : bytesToSize(obj.Size)),
 				$('<td>').attr('id', `trash-td-${ii}`).append($('<i>').append('n/a')),
 			];
 
-			const tr = $('<tr>').attr('id', `trash-tr-${ii}`);
+			const tr = $('<tr class="delete-row">').attr('id', `trash-tr-${ii}`);
 			td.reduce((trac, item) => trac.append(item), tr);
 			$('#trash-tbody').append(tr);
 		}
