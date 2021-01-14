@@ -98,6 +98,12 @@ function qs(key) {
 	return match && decodeURIComponent(match[1].replace(/\+/g, " "));
 }
 
+function sanitizeString(str) {
+	const tmpElement = document.createElement("div");
+	tmpElement.innerText = str;
+	return tmpElement.innerHTML;
+}
+
 //
 // Shared service that all controllers can use
 //
@@ -358,27 +364,31 @@ function ViewController($scope, SharedService) {
 		});
 	});
 
-	$scope.renderObject = (data, _type, full) => {
-		// DEBUG.log("renderObject:", JSON.stringify(full));
-		const href = object2hrefvirt($scope.view.settings.bucket, data);
-
-		function render(d, href2, text, download) {
-			if (download) {
-				return `<a data-s3="object" data-s3key="${d}" href="${href2}" download="${download}">${text}</a>`;
-			}
-			return `<a data-s3="folder" data-s3key="${d}" href="${href2}">${text}</a>`;
+	function makeS3FileDownloadLink(etag, href, text, download) {
+		if (download) {
+			return `<a data-s3="object" data-etag="${etag}" href="${href}" download="${download}">${sanitizeString(text)}</a>`;
 		}
 
-		if (full.CommonPrefix) {
+		return `<a data-s3="folder" data-etag="${etag}" href="${href}">${sanitizeString(text)}</a>`;
+	}
+
+	$scope.renderObject = (s3FileKey, _type, s3File) => {
+		const href = object2hrefvirt($scope.view.settings.bucket, s3FileKey);
+
+		// ETag is in quotes so we need to remove them
+		const etag = s3File.ETag.replace(/"/g, "");
+
+		if (s3File.CommonPrefix) {
 			// DEBUG.log("is folder: " + data);
 			if ($scope.view.settings.prefix) {
-				return render(data, href, prefix2folder(data));
+
+				return makeS3FileDownloadLink(etag, href, prefix2folder(s3FileKey));
 			}
 
-			return render(data, href, data);
+			return makeS3FileDownloadLink(etag, href, s3FileKey);
 		}
 
-		return render(data, href, fullpath2filename(data), fullpath2filename(data));
+		return makeS3FileDownloadLink(etag, href, fullpath2filename(s3FileKey), fullpath2filename(s3FileKey));
 	};
 
 	$scope.renderFolder = (data, _type, full) => (full.CommonPrefix ? '' : fullpath2pathname(data));
@@ -707,7 +717,8 @@ function ViewController($scope, SharedService) {
 		$scope.view.keys_selected = [];
 
 		$tb.DataTable().rows().data().each((data) => {
-			const link = document.querySelector(`[data-s3Key="${data.Key}"]`);
+			const etag = data.ETag.replace(/"/g, "");
+			const link = document.querySelector(`[data-etag="${etag}"]`);
 			const checkbox = link && link.parentElement && link.parentElement.parentElement
 				? link.parentElement.parentElement.querySelector("input[type='checkbox']")
 				: null;
