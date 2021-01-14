@@ -162,3 +162,18 @@ table.dataTable tbody tr {
     min-width: 25px;
     width: 0%;
 }
+
+a[data-s3="object"] {
+    max-width: 500px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+    display: block;
+}
+
+.delete-row td {
+    max-width: 150px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+}

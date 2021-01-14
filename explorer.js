@@ -98,6 +98,12 @@ function qs(key) {
 	return match && decodeURIComponent(match[1].replace(/\+/g, " "));
 }
 
+function sanitizeString(str) {
+	const tmpElement = document.createElement("div");
+	tmpElement.innerText = str;
+	return tmpElement.innerHTML;
+}
+
 //
 // Shared service that all controllers can use
 //
@@ -280,7 +286,8 @@ function ViewController($scope, SharedService) {
 
 		if (target.dataset.s3 === 'folder') {
 			// User has clicked on a folder so navigate into that folder
-			SharedService.changeViewPrefix(target.dataset.s3key);
+			const decodedKey = Base64.decode(target.dataset.s3key);
+			SharedService.changeViewPrefix(decodedKey);
 		} else if ($scope.view.settings.auth === 'anon') {
 			// Unauthenticated user has clicked on an object so download it
 			// in new window/tab
@@ -289,8 +296,9 @@ function ViewController($scope, SharedService) {
 			// Authenticated ser has clicked on an object so create pre-signed
 			// URL and download it in new window/tab
 			const s3 = new AWS.S3();
+			const decodedKey = Base64.decode(target.dataset.s3key);
 			const params = {
-				Bucket: $scope.view.settings.bucket, Key: target.dataset.s3key, Expires: 15,
+				Bucket: $scope.view.settings.bucket, Key: decodedKey, Expires: 15,
 			};
 			DEBUG.log('params:', params);
 			s3.getSignedUrl('getObject', params, (err, url) => {
@@ -358,27 +366,29 @@ function ViewController($scope, SharedService) {
 		});
 	});
 
-	$scope.renderObject = (data, _type, full) => {
-		// DEBUG.log("renderObject:", JSON.stringify(full));
-		const href = object2hrefvirt($scope.view.settings.bucket, data);
-
-		function render(d, href2, text, download) {
-			if (download) {
-				return `<a data-s3="object" data-s3key="${d}" href="${href2}" download="${download}">${text}</a>`;
-			}
-			return `<a data-s3="folder" data-s3key="${d}" href="${href2}">${text}</a>`;
+	function makeS3FileDownloadLink(s3Key, href, text, download) {
+		if (download) {
+			return `<a data-s3="object" data-s3key="${s3Key}" href="${href}" download="${download}">${sanitizeString(text)}</a>`;
 		}
 
-		if (full.CommonPrefix) {
+		return `<a data-s3="folder" data-s3key="${s3Key}" href="${href}">${sanitizeString(text)}</a>`;
+	}
+
+	$scope.renderObject = (s3FileKey, _type, s3File) => {
+		const href = object2hrefvirt($scope.view.settings.bucket, s3FileKey);
+		const encodedKey = Base64.encode(s3FileKey);
+
+		if (s3File.CommonPrefix) {
 			// DEBUG.log("is folder: " + data);
 			if ($scope.view.settings.prefix) {
-				return render(data, href, prefix2folder(data));
+
+				return makeS3FileDownloadLink(encodedKey, href, prefix2folder(s3FileKey));
 			}
 
-			return render(data, href, data);
+			return makeS3FileDownloadLink(encodedKey, href, s3FileKey);
 		}
 
-		return render(data, href, fullpath2filename(data), fullpath2filename(data));
+		return makeS3FileDownloadLink(encodedKey, href, fullpath2filename(s3FileKey), fullpath2filename(s3FileKey));
 	};
 
 	$scope.renderFolder = (data, _type, full) => (full.CommonPrefix ? '' : fullpath2pathname(data));
@@ -707,7 +717,8 @@ function ViewController($scope, SharedService) {
 		$scope.view.keys_selected = [];
 
 		$tb.DataTable().rows().data().each((data) => {
-			const link = document.querySelector(`[data-s3Key="${data.Key}"]`);
+			const encodedKey = Base64.encode(data.Key);
+			const link = document.querySelector(`[data-s3key="${encodedKey}"]`);
 			const checkbox = link && link.parentElement && link.parentElement.parentElement
 				? link.parentElement.parentElement.querySelector("input[type='checkbox']")
 				: null;
@@ -1273,17 +1284,18 @@ function TrashController($scope, SharedService) {
 			const obj = args.keys[ii];
 			DEBUG.log('Object to be deleted:', obj);
 
+			const sanitizedS3Key = sanitizeString(obj.Key);
 			const td = [
 				$('<td>').append(ii + 1),
-				$('<td>').append(isfolder(obj.Key) ? prefix2folder(obj.Key) : fullpath2filename(obj.Key)),
-				$('<td>').append(isfolder(obj.Key) ? prefix2parentfolder(obj.Key) : fullpath2pathname(obj.Key)),
+				$('<td>').append(isfolder(obj.Key) ? prefix2folder(sanitizedS3Key) : fullpath2filename(sanitizedS3Key)).attr('title', sanitizedS3Key),
+				$('<td>').append(isfolder(obj.Key) ? prefix2parentfolder(sanitizedS3Key) : fullpath2pathname(sanitizedS3Key)),
 				$('<td>').append(isfolder(obj.Key) ? '' : moment(obj.LastModified).fromNow()),
 				$('<td>').append(obj.LastModified ? moment(obj.LastModified).local().format('YYYY-MM-DD HH:mm:ss') : ''),
 				$('<td>').append(isfolder(obj.Key) ? '' : bytesToSize(obj.Size)),
 				$('<td>').attr('id', `trash-td-${ii}`).append($('<i>').append('n/a')),
 			];
 
-			const tr = $('<tr>').attr('id', `trash-tr-${ii}`);
+			const tr = $('<tr class="delete-row">').attr('id', `trash-tr-${ii}`);
 			td.reduce((trac, item) => trac.append(item), tr);
 			$('#trash-tbody').append(tr);
 		}
