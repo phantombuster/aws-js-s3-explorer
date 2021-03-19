@@ -172,8 +172,8 @@ permissions and limitations under the License.
         date: 3,
         size: 4
     };
-
     AWS.config.region = 'us-east-1';
+    AWS.config.correctClockSkew = true;
     console.log('Region: ' + AWS.config.region);
 
     // Initialize S3 SDK and the moment library (for time formatting utilities)
