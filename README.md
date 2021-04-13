@@ -18,19 +18,19 @@ AWS JavaScript S3 Explorer (v2 alpha) is a JavaScript application that uses AWS'
 - `npx http-server . 8081`
 - access it at [localhost:8081](localhost:8081)
 
-## Link to it in front locally
+## Test locally
 
 - `cd pb2-front`
-- edit `src/pages/Agent/index.tsx`
+- edit `src/pages/Agent/index.tsx` function `openFileBrowser`
 - set `const url = localhost:8081/?settings=${btoa(JSON.stringify(s3BrowserSettings))}`
 - Start/Restart front
 
-## Test in in stagging
+## Test in stagging
 
 - First open a PR pointing to the `prod` branch ☢️ It will automatically point to the original fork repository, first change to phantombuster then point to prod branch 🙏 ☢️
 - After a while a netlify link will appear inside the PR check details, just click on `details` button to open the stagging test & copy the url
 - `cd pb2-front`
-- edit `src/pages/Agent/index.tsx`
+- edit `src/pages/Agent/index.tsx` function `openFileBrowser`
 - set `const url = ${url-to-generated-netlify-s3}:8081/?settings=${btoa(JSON.stringify(s3BrowserSettings))}`
 - Start/Restart front
 
