@@ -150,7 +150,6 @@ function SharedService($rootScope) {
 		// AWS.config.update({ region: settings.region });
 		AWS.config.update(Object.assign(settings.cred, { region: settings.region }));
 		AWS.config.update({ correctClockSkew: true });
-		AWS.config.correctClockSkew = true;
 
 		if (this.skew) {
 			this.correctClockSkew(settings.bucket);
@@ -1343,7 +1342,6 @@ $(document).ready(() => {
 	AWS.config.update({ region: '' });
 	AWS.config.update({ signatureVersion: 'v4' });
 	AWS.config.update({ correctClockSkew: true });
-	AWS.config.correctClockSkew = true;
 
 	// Show navbuttons
 	$('#navbuttons').removeClass('hidden');
